@@ -1,4 +1,4 @@
-/* global document, window, location, screen, self, $, AlgoliaSearch, safari, Hogan */
+/* global document, window, location, screen, self, $, AlgoliaSearch, Bloodhound, safari, Hogan */
 
 /////////////////////////////
 //
@@ -47,7 +47,7 @@ var templateIssue = Hogan.compile('<div class="aa-suggestion aa-issue">' +
     '<span class="aa-issue-number">Issue #{{ number }}:</span> <a href="https://github.com/{{ repository.owner }}/{{ repository.name }}/issues/{{ number }}">{{{ _highlightResult.title.value }}}</a><br />' +
     '{{#repository.is_fork}}' + octiconFork + '{{/repository.is_fork}} ' +
     '{{^repository.is_fork}}{{#repository.is_private}}' + octiconLock + '{{/repository.is_private}}{{^repository.is_private}}' + octiconRepo + '{{/repository.is_private}}{{/repository.is_fork}} ' +
-    '{{ repository.owner }}/<span class="aa-repo-name">{{{ _highlightResult.repository.name.value }}}</span>' +
+    '<span class="aa-repo-name">{{{ _highlightResult.repository.full_name.value }}}</span>' +
   '</span>' +
   '<div class="aa-issue-body">{{{ _snippetResult.body.value }}}</div>' +
 '</div>');
@@ -70,7 +70,7 @@ var firefox = typeof self !== 'undefined' && typeof self.port !== 'undefined';
 
 function getURL(asset) {
   if (firefox) {
-    if (asset === 'images/algolia128x40.png') {
+    if (asset === 'images/logo.svg') {
       return self.options.logoUrl;
     } else if (asset === 'images/close-32.png') {
       return self.options.closeImgUrl;
@@ -121,7 +121,7 @@ var storage = {
 var crawledRepositories = [];
 
 function crawlPage(url, organization) {
-  $.get(url).success(function(data) {
+  $.get(url).done(function(data) {
     // parse HTML-based list of repositories
     $('<ul>' + data + '</ul>').find('li').each(function() {
       var isPrivate = $(this).hasClass('private');
@@ -151,7 +151,7 @@ function crawlRepositories() {
   crawlPage('/dashboard/ajax_your_repos');
 
   // get the homepage to fetch your list of organization
-  $.ajax('/', { headers: { 'X-Requested-With' : 'fake' } }).success(function(data) {
+  $.ajax('/', { headers: { 'X-Requested-With' : 'fake' } }).done(function(data) {
     $(data).find('.select-menu-list a.select-menu-item').each(function() {
       var href = $(this).attr('href');
       if (href.indexOf('/orgs/') === 0) {
@@ -201,12 +201,18 @@ function connectWithGitHub() {
   var left = (screen.width - width) / 2 - 16;
   var top = (screen.height - height) / 2 - 50;
   var windowFeatures = 'menubar=no,toolbar=no,status=no,width=' + width + ',height=' + height + ',left=' + left + ',top=' + top;
-  if (typeof safari !== 'undefined') {
+  if (typeof safari === 'undefined') {
     var win = window.open("https://github.algolia.com/signin", "authPopup", windowFeatures);
     win.onunload = function() {
       reloadPrivate();
     };
   }
+}
+
+function reset() {
+  storage.set('private', {});
+  storage.set('crawledRepositories', []);
+  $.get('https://github.algolia.com/reset');
 }
 
 storage.get('private', function(result) {
@@ -220,16 +226,21 @@ storage.get('private', function(result) {
 
 if (firefox) {
   self.port.on('connect-with-github', connectWithGitHub);
+  self.port.on('reset-login', reset);
 } else if (typeof chrome !== 'undefined') {
   chrome.runtime.onMessage.addListener(function(request) {
     if (request.type === 'connect-with-github') {
       connectWithGitHub();
+    } else if (request.type === 'reset-login') {
+      reset();
     }
   });
 } else if (typeof safari !== 'undefined') {
   safari.self.addEventListener('message', function(message) {
     if (message.name === 'connect-with-github') {
       connectWithGitHub();
+    } else if (message.name === 'reset-login') {
+      reset();
     }
   }, false);
 }
@@ -307,7 +318,7 @@ $(document).ready(function() {
   var $clearInputIcon = $('.awesome-autocomplete .icon-delete');
   $clearInputIcon.on('click touch', function(event) {
     event.preventDefault();
-    $q.val('');
+    $q.typeahead('val', '');
     $clearInputIcon.removeClass('active');
     $q.focus();
   });
@@ -335,7 +346,9 @@ $(document).ready(function() {
             '<span class="aa-query-default">search for "<em>' + sanitize(data.query) + '</em>"' +
               (isRepository() ? ' in this repository' : '') +
               (isOrganization() ? ' in this organization' : '') +
-            '</span>' +
+            '</span>' + '<br>Press <em>&lt;Shift+Enter&gt;</em> to ' +
+              '<span class="aa-query-default">search for "<em>' + sanitize(data.query) + '</em>"' +' in all repositories'+
+              '</span>' +
             '<span class="aa-query-cursor"></span>' +
             '</div>';
         }
@@ -380,7 +393,7 @@ $(document).ready(function() {
             }
           }, { attributesToSnippet: ['description:50'], hitsPerPage: NB_MY_REPOS });
         } else {
-          var engine = new window.Bloodhound({
+          var engine = new Bloodhound({
             name: 'private',
             local: crawledRepositories,
             datumTokenizer: function(d) { return tokenize(d.owner).concat(tokenize(d.name)); },
@@ -514,7 +527,7 @@ $(document).ready(function() {
       templates: {
         empty: function() {
           return '<div class="aa-branding">' +
-            'With <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 510 510"><path d="M255 489.6l-35.7-35.7C86.7 336.6 0 257.55 0 160.65 0 81.6 61.2 20.4 140.25 20.4c43.35 0 86.7 20.4 114.75 53.55C283.05 40.8 326.4 20.4 369.75 20.4 448.8 20.4 510 81.6 510 160.65c0 96.9-86.7 175.95-219.3 293.25L255 489.6z" fill="#D80027"/></svg> from <a href="https://www.algolia.com/?utm_source=github-awesome-autocomplete&utm_medium=link&utm_campaign=github-awesome-autocomplete_search"><img src="' + getURL('images/algolia128x40.png') + '" title="Algolia" /></a>' +
+            'With <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 510 510"><path d="M255 489.6l-35.7-35.7C86.7 336.6 0 257.55 0 160.65 0 81.6 61.2 20.4 140.25 20.4c43.35 0 86.7 20.4 114.75 53.55C283.05 40.8 326.4 20.4 369.75 20.4 448.8 20.4 510 81.6 510 160.65c0 96.9-86.7 175.95-219.3 293.25L255 489.6z" fill="#D80027"/></svg> from <a href="https://www.algolia.com/?utm_source=github-awesome-autocomplete&utm_medium=link&utm_campaign=github-awesome-autocomplete_search"><img src="' + getURL('images/logo.svg') + '" title="Algolia" /></a>' +
             '</div>';
         }
       }
@@ -557,7 +570,13 @@ $(document).ready(function() {
       $scopedSearch.addClass('org-scope');
     }
     if (e.keyCode === 13) { // enter
-      submit($(this).val());
+      if (e.shiftKey) {
+        submit($(this).val(), $('.js-site-search-form').data('unscoped-search-url'));
+        e.preventDefault();
+      }
+       else {
+        submit($(this).val());
+      }
     }
   });
 });

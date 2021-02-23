@@ -1,4 +1,4 @@
-# GitHub Awesome Autocomplete
+# Awesome Autocomplete for GitHub
 
 By working every day on building the best search engine, we've become obsessed with our own search experience on the websites and mobile applications we use. GitHub is quite big for us, we use their search bar every day but it was not optimal for our needs: so we just re-built Github's search the way we thought it should be and we now share it with the community via this [Chrome](https://chrome.google.com/webstore/detail/github-awesome-autocomple/djkfdjpoelphhdclfjhnffmnlnoknfnd), [Firefox](https://addons.mozilla.org/en-US/firefox/addon/github-awesome-autocomplete/) and [Safari](https://github.algolia.com/github-awesome-autocomplete.safariextz) extensions.
 
@@ -26,7 +26,14 @@ This extension replaces GitHub's search bar and add auto-completion (instant-sea
  * your issues
    * only available if you choose to "Connect with GitHub"
 
-![capture](capture.gif)
+![Algolia GitHub Awesome Autocomplete](https://cloud.githubusercontent.com/assets/9317857/22865228/d0428c68-f15f-11e6-86e5-ba4afa55e8b6.gif)
+
+From version 1.6.0, you can now also find GitHub repositories directly from the address bar, by typing `aa<space>`.
+
+![find GitHub repositories from the address bar](search-github-repositories-address-bar.png)
+
+*Address bar autocompletion does not work on Safari.*
+
 
 ### How does it work?
 
@@ -83,7 +90,7 @@ The `.crx` packed version is created from `unpacked-prod` sources.
 
 #### Firefox
 
-The `xpi` archive is created from `build/firefox`.
+The `.zip` archive is created from `build/firefox-unpacked-prod`.
 
 #### Safari
 
@@ -97,3 +104,7 @@ The `safariextz` archive is created from Safari.
 * default: `clean`, `test`, build step (copy all necessary files to `build`
   directory, browserify JS sources, prepare production version (using uglify),
   pack the `crx` and `xpi`
+
+### Publishing
+
+All publishing instructions can be found in the [CONTRIBUTING.md file](CONTRIBUTING.md).
